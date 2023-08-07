@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="/static/main.css">
+
+        <title>MoneroSwap | Home</title>
+    </head>
+    <body>
+        <div class="nav">
+            <span class="monero-theme-primary logo" onclick="location.href = '/'">
+                Monero<span class="bold monero-theme-secondary">Swap</span>
+            </span>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 5px; position: fixed; right: 0;">
+                <div style="position: relative;">
+                    <input class="wallet-input" type="text" id="SOLANA_SEND_INPUT" placeholder="Solana Wallet Address">
+                    <div id="WALLET_PFP_CONTAINER" style="position: relative; right: 20px;" class="cover size-pfp round pfp-container"><img src="" class="round theme-transition" id="WALLET_PROFILE_PIC"></div>
+                </div>
+                <div style="position: relative;">
+                    <input class="wallet-input" type="text" id="MONERO_SEND_INPUT" style="color: gainsboro;padding-left: 24px;width: 326px;padding-right: 24px;" placeholder="Monero Wallet Address">
+                    <div id="WALLET_PFP_CONTAINER_MON" style="position: relative; right: 20px;" class="cover size-pfp round pfp-container"><img src="" class="round theme-transition" id="WALLET_PROFILE_PIC_MON"></div>
+                </div>
+            </div>
+        </div>
+        <input type="hidden" id="c-page-id" value="">
+        <script>
+            var pageIdHolder = document.getElementById("c-page-id");
+
+            pageIdHolder.onchange = () => {
+                alert();
+            }
+
+            function changePageDynFunc(pageid) {
+                pageid = pageid.split("..").join("");
+
+                fetch(`/p/${pageid}`)
+                .then(r => r.text())
+                .then(r => {
+                    document.getElementById("main-content").innerHTML = r;
+                })
+            }
+
+            function setWallets(solana, monero) {
+                solana = solana.split(" ").join("");
+                monero = monero.split(" ").join("");
+
+                if (solana !== "" && monero != "") {
+                    fetch("/api/claimSOLAddress/" + solana + "/" + monero)
+                }
+            }
+
+            if (document.getElementById("SOLANA_SEND_INPUT").value !== "" && document.getElementById("SOLANA_SEND_INPUT").value.length >= 32 && document.getElementById("SOLANA_SEND_INPUT").value.length <= 44) {
+                document.getElementById("WALLET_PROFILE_PIC").style.opacity = "0";
+                setTimeout(() => {
+                    document.getElementById("WALLET_PROFILE_PIC").src = "https://api.dicebear.com/6.x/notionists-neutral/svg?seed=" + document.getElementById("SOLANA_SEND_INPUT").value;
+                    document.getElementById("WALLET_PROFILE_PIC").style.opacity = "1";
+                }, 300);
+            }
+
+            if (document.getElementById("MONERO_SEND_INPUT").value !== "" && document.getElementById("MONERO_SEND_INPUT").value.length == 95) {
+                document.getElementById("WALLET_PROFILE_PIC_MON").style.opacity = "0";
+                setTimeout(() => {
+                    document.getElementById("WALLET_PROFILE_PIC_MON").src = "https://api.dicebear.com/6.x/notionists-neutral/svg?seed=" + document.getElementById("MONERO_SEND_INPUT").value;
+                    document.getElementById("WALLET_PROFILE_PIC_MON").style.opacity = "1";
+                }, 300);
+            }
+
+            if (document.getElementById("SOLANA_SEND_INPUT").value.split(" ").join("") !== "" && document.getElementById("MONERO_SEND_INPUT").value.split(" ").join("") !== "") {
+                setWallets(document.getElementById("SOLANA_SEND_INPUT").value.split(" ").join(""), document.getElementById("MONERO_SEND_INPUT").value.split(" ").join(""));
+            }
+
+            document.getElementById("SOLANA_SEND_INPUT").onchange = (e) => {
+                const address = e.target.value;
+
+                if (address === "" || address.length < 32 || address.length > 44) {
+                    document.getElementById("WALLET_PROFILE_PIC").style.opacity = "0";
+                    setTimeout(() => {
+                        document.getElementById("WALLET_PROFILE_PIC").src = "";
+                    }, 300);
+                    if (address !== "") {
+                        document.getElementById("SOLANA_SEND_INPUT").placeholder = "Invalid Solana Wallet Address";
+                        document.getElementById("SOLANA_SEND_INPUT").value = "";
+                        document.getElementById("SOLANA_SEND_INPUT").disabled = true;
+                        document.getElementById("SOLANA_SEND_INPUT").style.color = "red";
+                        setTimeout(() => {
+                            document.getElementById("SOLANA_SEND_INPUT").placeholder = "Solana Wallet Address";
+                            document.getElementById("SOLANA_SEND_INPUT").disabled = false;
+                            document.getElementById("SOLANA_SEND_INPUT").style.color = "gainsboro";
+                        }, 2e3);
+                    } else {
+                        document.getElementById("SOLANA_SEND_INPUT").placeholder = "Solana Wallet Address";
+                        document.getElementById("SOLANA_SEND_INPUT").disabled = false;
+                        document.getElementById("SOLANA_SEND_INPUT").style.color = "gainsboro";
+                    }
+                } else {
+                    document.getElementById("WALLET_PROFILE_PIC").style.opacity = "0";
+                    setTimeout(() => {
+                        document.getElementById("WALLET_PROFILE_PIC").src = "https://api.dicebear.com/6.x/notionists-neutral/svg?seed=" + document.getElementById("SOLANA_SEND_INPUT").value;
+                        document.getElementById("WALLET_PROFILE_PIC").style.opacity = "1";
+                    }, 300);
+                    setWallets(document.getElementById("SOLANA_SEND_INPUT").value.split(" ").join(""), document.getElementById("MONERO_SEND_INPUT").value.split(" ").join(""));
+                }
+            }
+
+            document.getElementById("MONERO_SEND_INPUT").onchange = (e) => {
+                const address = e.target.value;
+
+                if (address === "" || address.length != 95 || (!address.startsWith("4") && !address.startsWith("8"))) {
+                    document.getElementById("WALLET_PROFILE_PIC_MON").style.opacity = "0";
+                    setTimeout(() => {
+                        document.getElementById("WALLET_PROFILE_PIC_MON").src = "";
+                    }, 300);
+                    if (address !== "") {
+                        document.getElementById("MONERO_SEND_INPUT").placeholder = "Invalid Monero Wallet Address";
+                        document.getElementById("MONERO_SEND_INPUT").value = "";
+                        document.getElementById("MONERO_SEND_INPUT").disabled = true;
+                        document.getElementById("MONERO_SEND_INPUT").style.color = "red";
+                        setTimeout(() => {
+                            document.getElementById("MONERO_SEND_INPUT").placeholder = "Monero Wallet Address";
+                            document.getElementById("MONERO_SEND_INPUT").disabled = false;
+                            document.getElementById("MONERO_SEND_INPUT").style.color = "gainsboro";
+                        }, 2e3);
+                    } else {
+                        document.getElementById("MONERO_SEND_INPUT").placeholder = "Monero Wallet Address";
+                        document.getElementById("MONERO_SEND_INPUT").disabled = false;
+                        document.getElementById("MONERO_SEND_INPUT").style.color = "gainsboro";
+                    }
+                } else {
+                    document.getElementById("WALLET_PROFILE_PIC_MON").style.opacity = "0";
+                    setTimeout(() => {
+                        document.getElementById("WALLET_PROFILE_PIC_MON").src = "https://api.dicebear.com/6.x/notionists-neutral/svg?seed=" + document.getElementById("MONERO_SEND_INPUT").value;
+                        document.getElementById("WALLET_PROFILE_PIC_MON").style.opacity = "1";
+                    }, 300);
+                    setWallets(document.getElementById("SOLANA_SEND_INPUT").value.split(" ").join(""), document.getElementById("MONERO_SEND_INPUT").value.split(" ").join(""));
+                }
+            }
+        </script>
+        <script src="/static/index.js/js-f-id"></script>
+    </body>
+</html>
