@@ -1,7 +1,7 @@
 {
   "name": "moneroswap",
   "version": "1.0.0",
-  "description": "A locally hosted server which automatically converts coins into XMR using the best price possible",
+  "description": "A server which automatically converts coins into XMR using the best price possible",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
