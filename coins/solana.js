@@ -21,6 +21,12 @@ var inProgressExchanges = {};
 var incomingTransactions = {};
 var incomingTransactionCB = null;
 var processingSigs = {};
+var exchangeStatusCache = {
+    config: {
+        cacheDuration: 2e3 // 2 seconds
+    },
+    data: {}
+};
 
 if (fs.existsSync("./bank/solana.b")) wallets = JSON.parse(fs.readFileSync("./bank/solana.b").toString());
 if (fs.existsSync("./ref-claims/solana.r")) claimableRefunds = JSON.parse(fs.readFileSync("./ref-claims/solana.r").toString());
@@ -202,6 +208,68 @@ const _addClaimableRefund = (walletAddress, amountSol) => {
     }
     
     _saveClaimableRefunds()
+}
+
+const _getExchangeStatus = async (exchangeId) => {
+    if (Object.keys(exchangeStatusCache).includes("data") && Object.keys(exchangeStatusCache.data).includes(exchangeId) && exchangeStatusCache.data[exchangeId].lastUpdated + exchangeStatusCache.config.cacheDuration > new Date().getTime()) {
+        return exchangeStatusCache.data[exchangeId].status;
+    }
+
+    if (!Object.keys(exchangeStatusCache).includes("data")) {
+        exchangeStatusCache.data = {};
+    }
+
+    try {
+        const f = await fetch('https://api.changenow.io/v2/exchange/by-id?id=' + exchangeId, {
+            headers: {
+                'x-changenow-api-key': ChangenowAPIKey
+            }
+        });
+        const r = await f.json();
+
+        if (Object.keys(r).includes("error") && r.error != "") {
+            console.error("[SOL] Changenow exchange failed with error code:", r.error + ", message:", r.message + ", object:", JSON.stringify(r) + ", exchangeId:", exchangeId);
+            
+            if (r.error == "not_valid_params" && r.message == "Not valid ID") return "INVALID_EXCHANGE_ID";
+            if (r.error == 404) return "INVALID_EXCHANGE_ID";
+
+            return "FAILED";
+        }
+
+        if (r.status == "failed") {
+            console.error("[SOL] Changenow exchange reported an error, exchange object:", r);
+
+            return "FAILED";
+        }
+
+        const stateTranslations = {
+            "new": "Creating exchange",
+            "waiting": "Waiting for Solana",
+            "confirming": "Confirming transaction",
+            "exchanging": "Exchanging in progress",
+            "sending": "Sending Monero",
+            "finished": "Exchange complete",
+            "refunded": r.refundAddress !== null && r.refundAddress !== "" ? "Exchange refunded to \"" + r.refundAddress + "\"" : "Refunded",
+            "verifying": "Verifying transaction"
+        };
+
+        var res = "Unknown status";
+
+        if (Object.keys(stateTranslations).includes(r.status)) {
+            res = stateTranslations[r.status];
+        }
+
+        exchangeStatusCache.data[exchangeId] = {
+            status: res,
+            lastUpdated: new Date().getTime()
+        };
+
+        return res;
+    } catch (ex) {
+        console.error("[SOL] Failed to get Changenow exchange status for exchange with id:", exchangeId, "error:", ex);
+
+        return null;
+    }
 }
 
 module.exports = {
@@ -592,5 +660,8 @@ module.exports = {
     },
     setIncomingTransactionCB: (cb) => {
         incomingTransactionCB = cb;
+    },
+    checkExchange: async (id) => {
+        return await _getExchangeStatus(id)
     }
 }

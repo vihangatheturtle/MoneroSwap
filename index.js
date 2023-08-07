@@ -236,6 +236,44 @@ server.get("/api/checkGBPPriceFromXMR/:xmrValue", (req, res) => {
     })
 });
 
+server.get("/api/exchangeStatus/:id", async (req, res) => {
+    const id = req.params.id;
+
+    const status = await bank.coin.SOL.checkExchange(id);
+
+    var payload = {
+        error: false,
+        status: status
+    }
+
+    var statusCode = 200;
+
+    if (status == null) {
+        payload = {
+            error: true,
+            message: "Failed to fetch exchange",
+            exchangeId: id
+        }
+        statusCode = 500;
+    } else if (status == "INVALID_EXCHANGE_ID") {
+        payload = {
+            error: true,
+            message: "Exchange not found",
+            exchangeId: id
+        }
+        statusCode = 404;
+    } else if (status == "FAILED") {
+        payload = {
+            error: true,
+            message: "Exchange failed",
+            exchangeId: id
+        }
+        statusCode = 500;
+    }
+
+    return res.status(statusCode || 500).json(payload);
+});
+
 server.listen(PORT, () => {
     console.log("Started server on port:", PORT);
 });
