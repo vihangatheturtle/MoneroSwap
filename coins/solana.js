@@ -244,7 +244,7 @@ const _getExchangeStatus = async (exchangeId) => {
 
         const stateTranslations = {
             "new": "Creating exchange",
-            "waiting": "Waiting for Solana",
+            "waiting": "Awaiting Solana payment",
             "confirming": "Confirming transaction",
             "exchanging": "Exchanging in progress",
             "sending": "Sending Monero",
