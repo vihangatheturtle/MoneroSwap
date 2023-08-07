@@ -76,7 +76,7 @@ async function processIncome(d, originalSignature) {
             }
         }
         
-        exchangeCheckLoop = setInterval(checkExchangeProgress, 15e3);
+        exchangeCheckLoop = setInterval(checkExchangeProgress, 20e3);
 
         // Start first pass instantly
         checkExchangeProgress();
