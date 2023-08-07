@@ -49,15 +49,37 @@ async function processIncome(d, originalSignature) {
         return;
     }
     console.log(d, "=", d.lamports / LAMPORTS_PER_SOL, "SOL");
-    await bank.coin.SOL.createMoneroExchange(d.lamports / LAMPORTS_PER_SOL, d.refundAddress, w, () => {
-        // Create new wallet address
-        // const y = bank.coin.SOL.generateSolanaAddress();
+    await bank.coin.SOL.createMoneroExchange(d.lamports / LAMPORTS_PER_SOL, d.refundAddress, w, async (exchangeId, _updateTxStatus, originalSignature) => {
+        var exchangeCheckLoop = null;
+        var lastStatus = "";
 
-        // console.log("[SOL] Generated new wallet address:", bank.coin.SOL.getWalletAddress(w).toString());
-        // printWalletCreds();
-        // bank.coin.SOL.monitorIncomingTransactions(y, processIncome, () => {
-        //     console.log("[SOL] Monitoring incoming transactions (Account: " + bank.coin.SOL.getWalletAddress(w).toString() + ")")
-        // });
+        const closeLoop = () => {
+            try { if (exchangeCheckLoop !== null) return clearInterval(exchangeCheckLoop); } catch { }
+            exchangeCheckLoop = null;
+        }
+
+        const checkExchangeProgress = async () => {
+            const status = await bank.coin.SOL.checkExchange(exchangeId);
+
+            if (status == lastStatus) return;
+
+            lastStatus = status;
+
+            if (status !== null && status !== "FAILED" && status !== "INVALID_EXCHANGE_ID") {
+                _updateTxStatus(originalSignature, status, {
+                    exchangeId: exchangeId,
+                    exchangeUrl: "https://changenow.io/exchange/txs/" + exchangeId,
+                    state: "e-state-update"
+                });
+            } else if (status == "Exchange complete") {
+                closeLoop()
+            }
+        }
+        
+        exchangeCheckLoop = setInterval(checkExchangeProgress, 15e3);
+
+        // Start first pass instantly
+        checkExchangeProgress();
     }, originalSignature);
 }
 

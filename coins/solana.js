@@ -155,6 +155,8 @@ const _getConfirmation = async (sender, connection, tx) => {
 };
 
 const _updateTxStatus = (signature, status, metadata) => {
+    if (!status || !signature) return null;
+
     if (!Object.keys(incomingTransactions).includes(signature)) {
         incomingTransactions[signature] = {
             status: "",
@@ -164,7 +166,7 @@ const _updateTxStatus = (signature, status, metadata) => {
     
     if (typeof metadata == "object") incomingTransactions[signature].metadata = metadata;
 
-    if (!status.startsWith("W_ADDR::") && incomingTransactions[signature].status !== status) {
+    if (status && !status.startsWith("W_ADDR::") && incomingTransactions[signature].status !== status) {
         incomingTransactions[signature].status = status;
 
         if (incomingTransactionCB !== null) {
@@ -211,12 +213,8 @@ const _addClaimableRefund = (walletAddress, amountSol) => {
 }
 
 const _getExchangeStatus = async (exchangeId) => {
-    if (Object.keys(exchangeStatusCache).includes("data") && Object.keys(exchangeStatusCache.data).includes(exchangeId) && exchangeStatusCache.data[exchangeId].lastUpdated + exchangeStatusCache.config.cacheDuration > new Date().getTime()) {
+    if (Object.keys(exchangeStatusCache).includes("data") && Object.keys(exchangeStatusCache.data).includes(exchangeId) && exchangeStatusCache.data[exchangeId].lastUpdated + exchangeStatusCache.config.cacheDuration > new Date().getTime() && exchangeStatusCache.data[exchangeId].status) {
         return exchangeStatusCache.data[exchangeId].status;
-    }
-
-    if (!Object.keys(exchangeStatusCache).includes("data")) {
-        exchangeStatusCache.data = {};
     }
 
     try {
@@ -246,14 +244,14 @@ const _getExchangeStatus = async (exchangeId) => {
             "new": "Creating exchange",
             "waiting": "Awaiting Solana payment",
             "confirming": "Confirming transaction",
-            "exchanging": "Exchanging in progress",
+            "exchanging": "Exchange in progress",
             "sending": "Sending Monero",
             "finished": "Exchange complete",
-            "refunded": r.refundAddress !== null && r.refundAddress !== "" ? "Exchange refunded to \"" + r.refundAddress + "\"" : "Refunded",
+            "refunded": r.refundAddress !== null && r.refundAddress !== "" ? "Exchange refunded payment to \"" + r.refundAddress + "\"" : "Refunded payment",
             "verifying": "Verifying transaction"
         };
 
-        var res = "Unknown status";
+        var res = "Waiting for exchange be available";
 
         if (Object.keys(stateTranslations).includes(r.status)) {
             res = stateTranslations[r.status];
@@ -511,7 +509,7 @@ module.exports = {
                     state: "e-created"
                 });
 
-                successcb();
+                successcb(r.id, _updateTxStatus, originalSignature);
 
                 return signature
             } catch (ex) {
@@ -662,6 +660,8 @@ module.exports = {
         incomingTransactionCB = cb;
     },
     checkExchange: async (id) => {
-        return await _getExchangeStatus(id)
+        const res = await _getExchangeStatus(id);
+        console.log(id, res)
+        return res;
     }
 }
