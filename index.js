@@ -35,7 +35,7 @@ bank.coin.SOL.setIncomingTransactionCB(tx => {
 
 // fs.writeFileSync("w.wid", bank.coin.SOL.getWalletAddress(w).toString());
 
-w = "185228948615173";
+w = env.WalletID;
 
 function printWalletCreds() {
     console.log("w:", w);
