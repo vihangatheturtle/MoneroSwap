@@ -28,7 +28,7 @@ body {
     left: 0;
     height: 96px;
     width: 100%;
-    background: rgba(255, 255, 255, 0.055);
+    background: #181818;
 }
 
 .theme-transition {

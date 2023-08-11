@@ -8,6 +8,8 @@ const PORT = 8892;
 
 const env = require("dotenv").config().parsed;
 
+const isDevMode = env.Environment ? env.Environment.startsWith("dev") : false
+
 var subscriptions = {
     "incomingTx": []
 };
@@ -38,6 +40,7 @@ bank.coin.SOL.setIncomingTransactionCB(tx => {
 w = env.WalletID;
 
 function printWalletCreds() {
+    if (!isDevMode) return;
     console.log("w:", w);
     console.log("wr:", bank.coin.SOL.getWalletAddress(w).toString());
 }
@@ -302,10 +305,11 @@ server.listen(PORT, () => {
 
 bank.coin.SOL.getWalletBalance(w)
 .then(console.log)
-.then(bank.coin.SOL.getPrivAddress(w)
-.then(console.log)
+.then(async () => {
+    if (isDevMode) console.log(await bank.coin.SOL.getPrivAddress(w));
+})
 .then(() => {
     bank.coin.SOL.monitorIncomingTransactions(w, processIncome, () => {
         console.log("[SOL] Monitoring incoming transactions (Account: " + bank.coin.SOL.getWalletAddress(w).toString() + ")")
     });
-}));
+});

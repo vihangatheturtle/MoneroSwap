@@ -5,6 +5,8 @@ const fetch = require("node-fetch");
 
 const env = require('dotenv').config().parsed;
 
+const isDevMode = env.Environment ? env.Environment.startsWith("dev") : false
+
 const _generateKey = () => {
     const keyPair = solanaWeb3.Keypair.generate();
   
@@ -36,12 +38,11 @@ if (fs.existsSync("./ref-claims/solana.r")) claimableRefunds = JSON.parse(fs.rea
 /*
 //      SOLANA SETTINGS
 */
-const net = env.SolanaNetwork;
+const net = isDevMode ? env.SolanaNetwork : "mainnet-beta";
 // const net = "devnet";
 const commitment = "finalized";
 
-
-console.log("[SOL] NETWORK:", net + ", COMMITMENT:", commitment);
+if (isDevMode) console.log("[SOL] NETWORK:", net + ", COMMITMENT:", commitment);
 
 // Coins will by default go here!
 const moneroRecvAddress = env.moneroRecvAddress || "846wjH9QCUF1cxqdbvXsZc2PACTePocJ1TVCqUXFAmUrDLNUSWR9964fERm5eb3LAB45F5UHd3GvEXUiDoGpRDtbHXFryeY";
@@ -49,7 +50,7 @@ const solanaFeeWallet = env.solanaFeeWallet || "HPQoHpeRZ6t5BZZoMauKZZXwsso5y9J1
 const ChangenowAPIKey = env.ChangenowAPIKey;
 const moonpayApiKey = env.MoonpayAPIKey;
 
-console.log(moneroRecvAddress, solanaFeeWallet, ChangenowAPIKey, moonpayApiKey)
+if (isDevMode) console.log(moneroRecvAddress, solanaFeeWallet, ChangenowAPIKey, moonpayApiKey);
 
 const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl(net), commitment);
 
@@ -141,14 +142,28 @@ const _getConfirmation = async (sender, connection, tx) => {
     const txData = await connection.getParsedTransaction(tx, {
         encoding: "jsonParsed"
     });
-    // console.log(txData, txData["transaction"]["message"]["instructions"][0])
-    if (txData.transaction && txData.transaction.message.instructions[txData.transaction.message.instructions.length - 1].parsed.info.destination == sender.toString()) {
-        _updateTxStatus(tx, "W_ADDR::" + txData.transaction.message.instructions[txData.transaction.message.instructions.length - 1].parsed.info.source);
-        return {
-            state: result.value?.confirmationStatus,
-            lamports: txData.transaction.message.instructions[txData.transaction.message.instructions.length - 1].parsed.info.lamports,
-            refundAddress: txData.transaction.message.instructions[txData.transaction.message.instructions.length - 1].parsed.info.source
+    const checkSender = (instruction, sender) => {
+        try { return (instruction.parsed.info.destination == sender.toString()) } catch {
+            return null;
         }
+    }
+    // console.log(txData, txData["transaction"]["message"]["instructions"][0])
+    if (txData.transaction && txData.transaction.message && txData.transaction.message.instructions && txData.transaction.message.instructions.length > 0) {
+        for (let i = 0; i < txData.transaction.message.instructions.length; i++) {
+            const inst = txData.transaction.message.instructions[i];
+
+            if (inst.parsed && inst.parsed.info && inst.parsed.info.lamports && JSON.stringify(inst).includes("11111111111111111111111111111111") && checkSender(inst, sender)) {
+                _updateTxStatus(tx, "W_ADDR::" + inst.parsed.info.source);
+                
+                return {
+                    state: result.value?.confirmationStatus,
+                    lamports: inst.parsed.info.lamports,
+                    refundAddress: inst.parsed.info.source
+                }
+            }
+        }
+
+        return "OUTGOING_TX";
     } else {
         return "OUTGOING_TX";
     }
@@ -661,7 +676,7 @@ module.exports = {
     },
     checkExchange: async (id) => {
         const res = await _getExchangeStatus(id);
-        console.log(id, res)
+        
         return res;
     }
 }
